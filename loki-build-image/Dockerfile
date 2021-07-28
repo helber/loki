@@ -1,16 +1,16 @@
-FROM alpine as helm
+FROM golang:1.16.6 as helm
 ARG HELM_VER="v3.2.3"
 
-RUN apk add --no-cache curl && \
-    curl -L -o /tmp/helm-$HELM_VER.tgz https://get.helm.sh/helm-${HELM_VER}-linux-amd64.tar.gz && \
+RUN export ARCH=$(go env GOARCH) && curl -L -o /tmp/helm-$HELM_VER.tgz https://get.helm.sh/helm-${HELM_VER}-linux-${ARCH}.tar.gz && \
     tar -xz -C /tmp -f /tmp/helm-$HELM_VER.tgz && \
-    mv /tmp/linux-amd64/helm /usr/bin/helm && \
-    rm -rf /tmp/linux-amd64 /tmp/helm-$HELM_VER.tgz
+    mv /tmp/linux-${ARCH}/helm /usr/bin/helm && \
+    rm -rf /tmp/linux-${ARCH} /tmp/helm-$HELM_VER.tgz
 
 FROM alpine as lychee
 ARG LYCHEE_VER="0.7.0"
 RUN apk add --no-cache curl && \
-    curl -L -o /tmp/lychee-$LYCHEE_VER.tgz https://github.com/lycheeverse/lychee/releases/download/${LYCHEE_VER}/lychee-${LYCHEE_VER}-x86_64-unknown-linux-gnu.tar.gz && \
+    export ARCH=$(arch) && \
+    curl -L -o /tmp/lychee-$LYCHEE_VER.tgz https://github.com/lycheeverse/lychee/releases/download/${LYCHEE_VER}/lychee-${LYCHEE_VER}-${ARCH}-unknown-linux-gnu.tar.gz && \
     tar -xz -C /tmp -f /tmp/lychee-$LYCHEE_VER.tgz && \
     mv /tmp/lychee /usr/bin/lychee && \
     rm -rf /tmp/linux-amd64 /tmp/lychee-$LYCHEE_VER.tgz
@@ -68,10 +68,8 @@ RUN GO111MODULE=on go get \
     github.com/golang/protobuf/protoc-gen-go@v1.3.0 \
     github.com/gogo/protobuf/protoc-gen-gogoslick@v1.2.1 \
     github.com/gogo/protobuf/gogoproto@v1.2.1 \
-    github.com/go-delve/delve/cmd/dlv@v1.3.2 \
-    # Due to the lack of a proper release tag, we use the commit hash of
-    # https://github.com/golang/tools/releases v0.1.7
-    golang.org/x/tools/cmd/goyacc@58d531046acdc757f177387bc1725bfa79895d69 \
+    github.com/go-delve/delve/cmd/dlv@v1.7.0 \
+    golang.org/x/tools/cmd/goyacc \
     github.com/mitchellh/gox && \
     rm -rf /go/pkg /go/src
 ENV GOCACHE=/go/cache
