@@ -307,6 +307,19 @@ The query_frontend_config configures the Loki query-frontend.
 # URL of querier for tail proxy.
 # CLI flag: -frontend.tail-proxy-url
 [tail_proxy_url: <string> | default = ""]
+
+# DNS hostname used for finding query-schedulers.
+# CLI flag: -frontend.scheduler-address
+[scheduler_address: <string> | default = ""]
+
+# How often to resolve the scheduler-address, in order to look for new
+# query-scheduler instances.
+# CLI flag: -frontend.scheduler-dns-lookup-period
+[scheduler_dns_lookup_period: <duration> | default = 10s]
+
+# Number of concurrent workers forwarding queries to single query-scheduler.
+# CLI flag: -frontend.scheduler-worker-concurrency
+[scheduler_worker_concurrency: <int> | default = 5]
 ```
 
 ## queryrange_config
@@ -322,8 +335,9 @@ The queryrange_config configures the query splitting and caching in the Loki que
 [split_queries_by_interval: <duration> | default = 0s]
 
 # Limit queries that can be sharded.
-# Queries with time range that fall between now and now minus the sharding lookback are not sharded.
-# Default value is 0s (disable), meaning all queries of all time range are sharded.
+# Queries within the time range of now and now minus this sharding lookback
+# are not sharded. The default value of 0s disables the lookback, causing
+# sharding of all queries at all times.
 # CLI flag: -frontend.min-sharding-lookback
 [min_sharding_lookback: <duration> | default = 0s]
 
@@ -762,6 +776,10 @@ The `frontend_worker_config` configures the worker - running within the Loki que
 
 # The CLI flags prefix for this block config is: querier.frontend-client
 [grpc_client_config: <grpc_client_config>]
+
+# DNS hostname used for finding query-schedulers.
+# CLI flag: -querier.scheduler-address
+[scheduler_address: <string> | default = ""]
 ```
 
 ## ingester_client_config
@@ -964,6 +982,10 @@ wal:
   # Maximum memory size the WAL may use during replay. After hitting this it will flush data to storage before continuing.
   # A unit suffix (KB, MB, GB) may be applied.
   [replay_memory_ceiling: <string> | default = 4GB]
+
+# Shard factor used in the ingesters for the in process reverse index.
+# This MUST be evenly divisible by ALL schema shard factors or Loki will not start.
+[index_shards: <int> | default = 32]
 ```
 
 ## consul_config
@@ -1780,6 +1802,10 @@ logs in Loki.
 # CLI flag: -distributor.max-line-size
 [max_line_size: <string> | default = none ]
 
+# Truncate log lines when they exceed max_line_size.
+# CLI flag: -distributor.max-line-size-truncate
+[max_line_size_truncate: <boolean> | default = false ]
+
 # Maximum number of log entries that will be returned for a query.
 # CLI flag: -validation.max-entries-limit
 [max_entries_limit_per_query: <int> | default = 5000 ]
@@ -1861,6 +1887,16 @@ logs in Loki.
 # Most recent allowed cacheable result per-tenant, to prevent caching very recent results that might still be in flux.
 # CLI flag: -frontend.max-cache-freshness
 [max_cache_freshness_per_query: <duration> | default = 1m]
+
+# Maximum number of queriers that can handle requests for a single tenant. If
+# set to 0 or value higher than number of available queriers, *all* queriers
+# will handle requests for the tenant. Each frontend (or query-scheduler, if
+# used) will select the same set of queriers for the same tenant (given that all
+# queriers are connected to all frontends / query-schedulers). This option only
+# works with queriers connecting to the query-frontend / query-scheduler, not
+# when using downstream URL.
+# CLI flag: -frontend.max-queriers-per-tenant
+[max_queriers_per_tenant: <int> | default = 0]
 ```
 
 ### grpc_client_config
